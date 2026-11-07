@@ -1,2 +1,2 @@
-# ANN-CNN
-A self-study project in ANN and CNN
+# ANN
+A self-study project in ANN
