@@ -11,7 +11,13 @@ import pandas as pd                                     #数据处理
 import time                                             #时间模块
 #构建函数和数据集
 def create_dataset():
-    data=pd.read
+    data=pd.read_csv('./data/手机价格预测.csv')           #加载csv
+    x,y=data.iloc[:,:-1],data.iloc[:,-1]                #获取x特征列y标签列
+    x=x.astype(np.float32)                              #把特征列转成浮点型
+    x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.2,random_state=3,stratify=y)  #切分训练集和测试集
+    train_dataset=TensorDataset(torch.tensor(x_train.values),torch.tensor(y_train.values))
+    test_dataset=TensorDataset(torch.tensor(x_test.values),torch.tensor(y_test.values))         #把数据集封装成张量数据集
+    return train_dataset,test_dataset,x_train.shape[1],len(np.unique(y))
 #测试
 if __name__=='__main__':
-    create_dataset()
+    train_dataset,test_dataset,input_dim,output_dim=create_dataset()
