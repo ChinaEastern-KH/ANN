@@ -1,5 +1,6 @@
 #导包
 import torch                                            #PyTorch框架，封装了张量的各种操作
+from sklearn.preprocessing import StandardScaler
 from torch.utils.data import TensorDataset              #数据集对象.
 from torch.utils.data import DataLoader                 #数据加载器.
 import torch.nn as nn                                   #neural network，封装了神经网络的各种操作
@@ -15,8 +16,11 @@ def create_dataset():                                   #构建函数和数据�
     x,y=data.iloc[:,:-1],data.iloc[:,-1]                #获取x特征列y标签列
     x=x.astype(np.float32)                              #把特征列转成浮点型
     x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.2,random_state=3,stratify=y)  #切分训练集和测试集
-    train_dataset=TensorDataset(torch.tensor(x_train.values),torch.tensor(y_train.values))
-    test_dataset=TensorDataset(torch.tensor(x_test.values),torch.tensor(y_test.values))         #把数据集封装成张量数据集
+    transfer=StandardScaler()
+    x_train=transfer.fit_transform(x_train)
+    x_test=transfer.transform(x_test)                   #数据标准化
+    train_dataset=TensorDataset(torch.from_numpy(x_train),torch.tensor(y_train.values))
+    test_dataset=TensorDataset(torch.from_numpy(x_test),torch.tensor(y_test.values))         #把数据集封装成张量数据集
     return train_dataset,test_dataset,x_train.shape[1],len(np.unique(y))
 class PhonePriceModel(nn.Module):                   #搭建神经网络
     def __init__(self,input_dim,output_dim):        #初始化父类成员，搭建神经网络
@@ -33,7 +37,7 @@ def train(train_dataset,input_dim,output_dim):                              #模
     train_loader=DataLoader(train_dataset,batch_size=16,shuffle=True)       #创建数据加载器
     model = PhonePriceModel(input_dim, output_dim)                          #创建神经网络模型
     criterion=nn.CrossEntropyLoss()                                         #定义损失函数
-    optimizer=optim.SGD(model.parameters(),lr=0.001)                         #创建优化器对象
+    optimizer=optim.Adam(model.parameters(),lr=1e-4)                        #创建优化器对象
     epochs=50                                                               #定义变量，记录训练总轮数
     for epoch in range(epochs):                                             #开始每轮训练
         total_loss,batch_num=0.0,0                                          #定义变量，记录每次的损失值、训练批次数
@@ -62,7 +66,5 @@ def evaluate(test_dataset,input_dim,output_dim):                            #模
     print(f'准确率：{correct/len(test_dataset):.4f}')
 if __name__=='__main__':                                                #测试
     train_dataset,test_dataset,input_dim,output_dim=create_dataset()
-    #model=PhonePriceModel(input_dim,output_dim)
-    #ummary(model,input_size=(20,input_dim))
-    #train(train_dataset,input_dim,output_dim)
+    train(train_dataset,input_dim,output_dim)
     evaluate(test_dataset, input_dim, output_dim)
