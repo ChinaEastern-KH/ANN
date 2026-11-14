@@ -33,7 +33,7 @@ def train(train_dataset,input_dim,output_dim):                              #模
     train_loader=DataLoader(train_dataset,batch_size=16,shuffle=True)       #创建数据加载器
     model = PhonePriceModel(input_dim, output_dim)                          #创建神经网络模型
     criterion=nn.CrossEntropyLoss()                                         #定义损失函数
-    optimizer=optim.SGD(model.parameters(),lr=0.01)                         #创建优化器对象
+    optimizer=optim.SGD(model.parameters(),lr=0.001)                         #创建优化器对象
     epochs=50                                                               #定义变量，记录训练总轮数
     for epoch in range(epochs):                                             #开始每轮训练
         total_loss,batch_num=0.0,0                                          #定义变量，记录每次的损失值、训练批次数
@@ -49,8 +49,20 @@ def train(train_dataset,input_dim,output_dim):                              #模
             batch_num+=1
         print(f'epoch:{epoch+1},loss:{total_loss/batch_num:.4f},time:{time.time()-start:.2f}s')
     torch.save(model.state_dict(),'./model/phone.pth')                    #保存模型
+def evaluate(test_dataset,input_dim,output_dim):                            #模型测试
+    model=PhonePriceModel(input_dim,output_dim)                             #创建神经网络分类对象
+    model.load_state_dict(torch.load('./model/phone.pth'))                  #加载模型参数
+    test_loader=DataLoader(test_dataset,batch_size=8,shuffle=False)       #创建测试集的数据加载器对象
+    correct=0                                                               #定义预测正确样本个数的变量
+    for x,y in test_loader:                                                 #从数据加载器中获取每批次数据
+        model.eval()                                                        #切换到测试模式
+        y_pred=model(x)                                                     #模型预测
+        y_pred=torch.argmax(y_pred,dim=1)                                   #获取最大值对应的下标和类别
+        correct+=(y_pred==y).sum()                                          #统计预测正确样本个数
+    print(f'准确率：{correct/len(test_dataset):.4f}')
 if __name__=='__main__':                                                #测试
     train_dataset,test_dataset,input_dim,output_dim=create_dataset()
     #model=PhonePriceModel(input_dim,output_dim)
     #ummary(model,input_size=(20,input_dim))
-    train(train_dataset,input_dim,output_dim)
+    #train(train_dataset,input_dim,output_dim)
+    evaluate(test_dataset, input_dim, output_dim)
