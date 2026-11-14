@@ -10,8 +10,7 @@ import numpy as np                                      #数组(矩阵)操作
 import pandas as pd                                     #数据处理
 import time                                             #时间模块
 from torchsummary import summary                        #模型结构可视化
-#构建函数和数据集
-def create_dataset():
+def create_dataset():                                   #构建函数和数据集
     data=pd.read_csv('./data/手机价格预测.csv')           #加载csv
     x,y=data.iloc[:,:-1],data.iloc[:,-1]                #获取x特征列y标签列
     x=x.astype(np.float32)                              #把特征列转成浮点型
@@ -19,8 +18,7 @@ def create_dataset():
     train_dataset=TensorDataset(torch.tensor(x_train.values),torch.tensor(y_train.values))
     test_dataset=TensorDataset(torch.tensor(x_test.values),torch.tensor(y_test.values))         #把数据集封装成张量数据集
     return train_dataset,test_dataset,x_train.shape[1],len(np.unique(y))
-#搭建神经网络
-class PhonePriceModel(nn.Module):
+class PhonePriceModel(nn.Module):                   #搭建神经网络
     def __init__(self,input_dim,output_dim):        #初始化父类成员，搭建神经网络
         super().__init__()                          #初始化父类成员
         self.linear1=nn.Linear(input_dim,128)
@@ -31,8 +29,28 @@ class PhonePriceModel(nn.Module):
         x=torch.relu(self.linear2(x))                          #隐藏层2：加权求和+relu
         x=self.output(x)                                       #隐藏层3：加权求和
         return x
-#测试
-if __name__=='__main__':
+def train(train_dataset,input_dim,output_dim):                              #模型训练
+    train_loader=DataLoader(train_dataset,batch_size=16,shuffle=True)       #创建数据加载器
+    model = PhonePriceModel(input_dim, output_dim)                          #创建神经网络模型
+    criterion=nn.CrossEntropyLoss()                                         #定义损失函数
+    optimizer=optim.SGD(model.parameters(),lr=0.01)                         #创建优化器对象
+    epochs=50                                                               #定义变量，记录训练总轮数
+    for epoch in range(epochs):                                             #开始每轮训练
+        total_loss,batch_num=0.0,0                                          #定义变量，记录每次的损失值、训练批次数
+        start=time.time()                                                   #定义变量，表示训练开始时间
+        for x,y in train_loader:                                            #开始本轮各批次训练
+            model.train()                                                   #训练模式
+            y_pred=model(x)                                                 #模型预测
+            loss=criterion(y_pred,y)                                        #计算损失
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()                                                #梯度清零，反向传播，优化参数
+            total_loss+=loss.item()                                         #累加每批次平均损失值
+            batch_num+=1
+        print(f'epoch:{epoch+1},loss:{total_loss/batch_num:.4f},time:{time.time()-start:.2f}s')
+    torch.save(model.state_dict(),'./model/phone.pth')                    #保存模型
+if __name__=='__main__':                                                #测试
     train_dataset,test_dataset,input_dim,output_dim=create_dataset()
-    model=PhonePriceModel(input_dim,output_dim)
-    summary(model,input_size=(20,input_dim))
+    #model=PhonePriceModel(input_dim,output_dim)
+    #ummary(model,input_size=(20,input_dim))
+    train(train_dataset,input_dim,output_dim)
